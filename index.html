@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Burraco</title>
+<meta name="theme-color" content="#0f5a3c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Burraco">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;800&family=Figtree:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE: un'app iOS da tavolo da gioco, sicura e leggibile a colpo d'occhio
+   IDEA: il tappeto verde con le carte bianche sopra; il segnapunti è il blocchetto
+   PICTURE: il tabellone punteggi sempre in alto, con barra verso la meta
+   COLOUR and TYPE: verde panno, bianco carta, rosso cuori; Barlow Condensed numeri, Figtree testo
+   LAYOUT: colonna da telefono, header fisso, tab bar in basso, foglio "nuova mano" */
+:root{color-scheme:light dark;
+--felt:light-dark(#0f5a3c,#0a2a1d);--felt2:light-dark(#0c4a31,#071f15);
+--card:light-dark(#ffffff,#15231c);--ink:light-dark(#14201a,#eaf2ec);--mute:light-dark(#5d6d64,#9db0a5);
+--line:light-dark(#e3e8e4,#24372d);--red:light-dark(#d62839,#ff5a68);--gold:#f2c14e;--soft:light-dark(#f2f5f3,#1b2c23)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+html,body{overscroll-behavior:none}input{-webkit-user-select:text;user-select:text}body{margin:0;-webkit-user-select:none;user-select:none;background:var(--felt2);color:var(--ink);font:16px/1.5 Figtree,system-ui,sans-serif;overflow-x:clip}
+.app{max-width:460px;margin:0 auto;min-height:100vh;background:var(--felt);position:relative;padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+.num{font-family:"Barlow Condensed",sans-serif;font-weight:800;font-variant-numeric:tabular-nums}
+h1{font:800 34px/1.05 "Barlow Condensed",sans-serif;margin:0;color:#fff}
+h2{font-size:17px;margin:0 0 10px}
+.top{padding:calc(14px + env(safe-area-inset-top)) 16px 14px;position:sticky;top:0;z-index:5;background:var(--felt);box-shadow:0 6px 18px rgba(0,0,0,.18)}
+.toprow{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;color:#cfe5d7;font-size:14px}
+.board{display:grid;gap:8px}
+.side{background:var(--card);border-radius:14px;padding:10px 12px;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:2px 10px;box-shadow:0 2px 0 rgba(0,0,0,.15)}
+.side.lead{outline:3px solid var(--gold)}
+.side .nm{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.side .tot{font-size:40px;line-height:1;grid-row:span 2}
+.side .tot.neg{color:var(--red)}
+.side .sub{font-size:13px;color:var(--mute)}
+.bar{grid-column:1/-1;height:10px;border-radius:5px;background:light-dark(#dfe6e1,#2a3d33);overflow:hidden;margin-top:8px}
+.bar i{display:block;height:100%;background:light-dark(#2f8f5b,#4cc488);border-radius:5px;transition:width .4s}.bar i.neg{background:var(--red)}
+.side.lead .bar i{background:var(--gold)}
+main{padding:16px}
+.panel{background:var(--card);border-radius:16px;padding:16px;margin-bottom:14px}
+.mute{color:var(--mute);font-size:14px}
+.seg{display:flex;background:var(--soft);border-radius:12px;padding:3px;gap:3px;flex-wrap:wrap}
+.seg button{flex:1;min-height:40px;border:0;border-radius:9px;background:none;font:600 15px Figtree,sans-serif;color:var(--ink);cursor:pointer;padding:0 8px}
+.seg button.on{background:var(--card);box-shadow:0 1px 4px rgba(0,0,0,.15)}
+.seg.closer button.on{background:var(--red);color:#fff}
+label.f{display:block;font-size:14px;font-weight:600;margin:14px 0 6px}
+input[type=text],input[type=number]{width:100%;min-height:44px;font:16px Figtree,sans-serif;border:1.5px solid var(--line);border-radius:10px;padding:8px 12px;background:var(--card);color:var(--ink)}
+input:focus-visible,button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.btn{display:block;width:100%;min-height:50px;border:0;border-radius:14px;background:var(--red);color:#fff;font:700 17px Figtree,sans-serif;cursor:pointer;margin-top:16px}
+.btn.ghost{background:var(--soft);color:var(--ink)}
+.btn:disabled{opacity:.45}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line)}
+.row:first-of-type{border-top:0}
+.row .lb{font-weight:600}.row .lb small{display:block;font-weight:400;color:var(--mute);font-size:13px}
+.step{display:flex;align-items:center;gap:6px;flex:none}
+.step button{width:40px;height:40px;border-radius:50%;border:1.5px solid var(--line);background:var(--card);color:var(--ink);font-size:22px;cursor:pointer;line-height:1}
+.step b{min-width:26px;text-align:center;font-size:22px}
+.sw{position:relative;width:52px;height:32px;flex:none}
+.sw input{opacity:0;position:absolute;inset:0;margin:0;cursor:pointer;z-index:1}
+.sw span{position:absolute;inset:0;border-radius:16px;background:var(--line);transition:.2s}
+.sw span::after{content:"";position:absolute;width:26px;height:26px;border-radius:50%;background:#fff;top:3px;left:3px;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.sw input:checked+span{background:#2fa36b}.sw input:checked+span::after{left:23px}
+.sw input:disabled+span{opacity:.5}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.chips button{min-height:34px;padding:0 10px;border-radius:17px;border:1.5px solid var(--line);background:var(--soft);color:var(--ink);font:600 14px Figtree,sans-serif;cursor:pointer}
+.hsc{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px}
+.hsc .num{font-size:30px}
+.warn{background:light-dark(#fdecee,#3a1a1e);color:var(--red);border-radius:10px;padding:8px 12px;font-size:14px;margin-top:10px}
+.tabs{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:460px;display:flex;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);z-index:6}
+.tabs button{flex:1;min-height:60px;border:0;background:none;font:600 12px Figtree,sans-serif;color:var(--mute);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.tabs button svg{width:24px;height:24px}
+.tabs button.on{color:var(--felt)}
+:root[data-theme=dark] .tabs button.on{color:var(--gold)}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]) .tabs button.on{color:var(--gold)}}
+.tabs .plus{color:#fff!important}
+.tabs .plus span{width:52px;height:52px;border-radius:50%;background:var(--red);display:grid;place-items:center;margin-top:-22px;box-shadow:0 4px 12px rgba(214,40,57,.45);font-size:30px;line-height:1}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th,td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:right}
+th:first-child,td:first-child{text-align:left}
+th{font-size:13px;color:var(--mute);font-weight:600}
+td.c{color:var(--red);font-weight:700}
+.hist button{border:0;background:none;color:var(--mute);cursor:pointer;min-width:36px;min-height:36px;font-size:16px}
+.rules h3{font-size:16px;margin:16px 0 6px}
+.rules ul{margin:0;padding-left:20px}.rules li{margin:3px 0}
+.vals{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+.pc{border:1.5px solid var(--line);border-radius:10px;padding:8px;text-align:center}
+.pc b{display:block;font-size:26px}.pc span{font-size:13px;color:var(--mute)}
+.pc.r b{color:var(--red)}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:9;padding:20px}
+.ov.show{display:flex}
+.ov .panel{max-width:380px;width:100%;text-align:center}
+.trophy{font-size:64px;line-height:1;color:var(--gold)}
+button{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.keys button:active,.chips button:active{filter:brightness(.88)}
+.pts{width:100%;min-height:64px;border:1.5px solid var(--line);border-radius:12px;background:var(--soft);color:var(--ink);display:flex;align-items:center;justify-content:space-between;padding:0 14px;cursor:pointer;font:14px Figtree,sans-serif}
+.pts .num{font-size:34px}.pts small{color:var(--mute)}
+.neg{color:var(--red)}
+.kp{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center;z-index:8}
+.kp.show{display:flex}
+.sheet{background:var(--card);width:100%;max-width:460px;border-radius:20px 20px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom));animation:up .22s ease-out}
+@keyframes up{from{transform:translateY(40%)}}
+.disp{font-size:56px;text-align:center;line-height:1.1;margin:4px 0 10px}
+.sg .on.neg{background:var(--red);color:#fff}.seg button:disabled{opacity:.35}
+.keys{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0 0}
+.keys button{min-height:56px;border:0;border-radius:12px;background:var(--soft);color:var(--ink);font:800 28px "Barlow Condensed",sans-serif;cursor:pointer}
+.keys button.fn{font-size:22px;background:var(--line)}.keys button:disabled{opacity:.35}
+tr.tap{cursor:pointer}tr.tap:active{background:var(--soft)}.ed{color:var(--mute);font-size:12px}
+.gear{border:1px solid rgba(255,255,255,.35);background:none;color:#fff;border-radius:16px;min-height:32px;padding:0 12px;font:600 13px Figtree,sans-serif;cursor:pointer}
+.btn.danger{background:none;color:var(--red);border:1.5px solid var(--red)}
+.toast{position:fixed;left:50%;bottom:calc(76px + env(safe-area-inset-bottom));transform:translate(-50%,20px);width:calc(100% - 32px);max-width:428px;background:#14201a;color:#fff;border-radius:14px;padding:10px 10px 10px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;opacity:0;pointer-events:none;transition:.25s;z-index:7}
+.toast.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+.toast button{border:0;background:var(--gold);color:#14201a;font:700 15px Figtree,sans-serif;border-radius:10px;min-height:40px;padding:0 14px;cursor:pointer}
+.who{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+.who button{min-height:64px;border:2px solid var(--line);border-radius:14px;background:var(--soft);color:var(--ink);font:700 17px Figtree,sans-serif;cursor:pointer;padding:6px 10px;overflow-wrap:anywhere}
+.who button.on{background:var(--red);border-color:var(--red);color:#fff}
+.link{display:block;margin:10px auto 0;border:0;background:none;color:var(--mute);font:600 14px Figtree,sans-serif;min-height:40px;cursor:pointer;text-decoration:underline}
+.link.on{color:var(--red)}
+.panel.closer{outline:2px solid var(--red)}
+.tag{display:inline-block;background:light-dark(#fdecee,#3a1a1e);color:var(--red);font-weight:700;font-size:14px;border-radius:8px;padding:4px 10px;margin-top:4px}
+.q{font-size:14px;font-weight:600;margin:14px 0 6px}
+.yn button.on.no{background:var(--red);color:#fff}
+.burs{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+.bu{display:flex;align-items:center;justify-content:space-between;gap:6px;background:var(--soft);border-radius:12px;padding:6px 6px 6px 10px;font-weight:600;font-size:15px}
+.bu small{color:var(--mute);font-weight:400}
+.bu .step button{width:36px;height:36px;font-size:20px}.bu .step b{min-width:20px;font-size:20px}
+.note{font-size:13px;color:#cfe5d7;text-align:center;padding:4px 16px 16px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+<div class="kp" id="kp"></div>
+<div class="toast" id="toast" role="status"></div>
+<div class="ov" id="ov"><div class="panel" id="ovc"></div></div>
+<script>
+{
+const S={mode:2,target:2005,semi:false,names:["","","",""],game:null,tab:"score",draft:null,edit:-1};
+try{const s=JSON.parse(localStorage.getItem("burraco")||"null");if(s)Object.assign(S,s,{tab:"score",draft:null,edit:-1})}catch(e){}
+const save=()=>{try{localStorage.setItem("burraco",JSON.stringify({mode:S.mode,target:S.target,semi:S.semi,names:S.names,game:S.game}))}catch(e){}};
+const esc=t=>String(t).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const $=id=>document.getElementById(id);
+const fmt=n=>(n>0?"+":"")+n;
+const blank=()=>({pz:null,pul:0,semi:0,spo:0,carte:0});
+const cards=s=>s.carte!==undefined?+s.carte||0:(+s.terra||0)-(+s.mano||0);
+const nb=s=>s.pul+s.semi+s.spo;
+const handScore=(h,i)=>{const s=h.sides[i];return(h.closer===i?100:0)+s.pul*200+s.semi*150+s.spo*100+cards(s)-(s.pz?0:100)};
+const totals=()=>S.game.sides.map((_,i)=>S.game.hands.reduce((a,h)=>a+handScore(h,i),0));
+const ICON={score:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>',
+hist:'<path d="M4 6h16M4 12h16M4 18h10" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>',
+rules:'<path d="M6 3h9l4 4v14H6z M14 3v5h5 M9 13h7M9 17h5" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/>',
+cards:'<rect x="3" y="5" width="11" height="15" rx="2" stroke="currentColor" stroke-width="2" fill="none"/><path d="M14 7l5 1.3-3.4 12.6-4-1" stroke="currentColor" stroke-width="2" fill="none"/>'};
+
+function setupView(){
+  const n=S.mode===4?4:S.mode;
+  const ph=S.mode===4?["Giocatore 1 (coppia A)","Giocatore 2 (coppia A)","Giocatore 3 (coppia B)","Giocatore 4 (coppia B)"]:["Giocatore 1","Giocatore 2","Giocatore 3"];
+  return `<div class="top"><h1>Nuova partita</h1><div class="toprow" style="margin:6px 0 0">Scegli giocatori e meta, poi si parte.</div></div>
+  <main><div class="panel"><h2>Partecipanti</h2>
+  <div class="seg" id="mode">${[[2,"2 giocatori"],[3,"3 giocatori"],[4,"4 · a coppie"]].map(([v,l])=>`<button data-v="${v}" class="${S.mode===v?"on":""}">${l}</button>`).join("")}</div>
+  ${Array.from({length:n},(_,i)=>`<label class="f" for="n${i}">${ph[i]}</label><input type="text" id="n${i}" maxlength="18" placeholder="Nome" value="${esc(S.names[i]||"")}">`).join("")}
+  </div>
+  <div class="panel"><h2>Punteggio da raggiungere</h2>
+  <div class="seg" id="tgt">${[505,1005,1505,2005,2505].map(v=>`<button data-v="${v}" class="${S.target===v?"on":""}">${v}</button>`).join("")}</div>
+  <div class="row" style="margin-top:12px"><div class="lb">Burraco semipulito (150)<small>Variante: 7 carte naturali in fila + matta. Non usata da tutte le federazioni.</small></div>
+  <label class="sw"><input type="checkbox" id="semi" ${S.semi?"checked":""}><span></span></label></div>
+  <button class="btn" id="start">Inizia partita</button></div></main>`;
+}
+function startGame(){
+  const n=S.mode===4?4:S.mode;
+  for(let i=0;i<n;i++)S.names[i]=$("n"+i).value.trim();
+  const nm=i=>S.names[i]||("Giocatore "+(i+1));
+  const sides=S.mode===4?[{name:nm(0)+" & "+nm(1)},{name:nm(2)+" & "+nm(3)}]:Array.from({length:n},(_,i)=>({name:nm(i)}));
+  S.game={sides,target:S.target,semi:S.semi,hands:[],started:Date.now()};
+  S.tab="score";save();render();
+}
+function board(){
+  const t=totals(),mx=Math.max(...t),g=S.game;
+  return `<div class="top"><div class="toprow"><span>Meta <b class="num" style="font-size:18px;color:#fff">${g.target}</b> · Mano ${g.hands.length+1}</span><button class="gear" data-tab="game">✎ Partita</button></div>
+  <div class="board">${g.sides.map((s,i)=>{const p=t[i]===0?0:Math.max(3,Math.min(100,Math.abs(t[i])/g.target*100));const last=g.hands.length?handScore(g.hands.at(-1),i):null;
+  return `<div class="side ${g.hands.length&&t[i]===mx?"lead":""}"><div class="nm">${esc(s.name)}</div><div class="tot num ${t[i]<0?"neg":""}">${t[i]}</div>
+  <div class="sub">${last===null?"nessuna mano":"ultima "+fmt(last)} · mancano ${Math.max(0,g.target-t[i])}</div><div class="bar" role="img" aria-label="${t[i]} su ${g.target}"><i class="${t[i]<0?"neg":""}" style="width:${p}%"></i></div></div>`}).join("")}</div></div>`;
+}
+function scoreView(){
+  const g=S.game;
+  if(!g.hands.length)return `<main><div class="panel" style="text-align:center"><h2>Pronti a giocare</h2><p class="mute">A fine smazzata tocca il pulsante rosso <b>+</b> per segnare la mano: chi ha chiuso, burraco, carte a terra e carte rimaste in mano.</p><button class="btn" data-act="new">Segna la prima mano</button></div></main>`;
+  const t=totals();
+  const stats=g.sides.map((s,i)=>({c:g.hands.filter(h=>h.closer===i).length,b:g.hands.reduce((a,h)=>a+h.sides[i].pul+h.sides[i].semi+h.sides[i].spo,0),p:g.hands.filter(h=>!h.sides[i].pz).length}));
+  return `<main><div class="panel"><h2>Riepilogo</h2><table><thead><tr><th></th><th>Chiusure</th><th>Burraco</th><th>No pozz.</th></tr></thead>
+  <tbody>${g.sides.map((s,i)=>`<tr><td>${esc(s.name)}</td><td>${stats[i].c}</td><td>${stats[i].b}</td><td>${stats[i].p}</td></tr>`).join("")}</tbody></table></div>
+  ${histTable(true)}
+  <button class="btn ghost" data-act="reset">Termina e nuova partita</button></main>`;
+}
+function histTable(short){
+  const g=S.game,hs=g.hands.map((h,k)=>({h,k}));const list=short?hs.slice(-4):hs;
+  if(!hs.length)return `<div class="panel"><p class="mute">Nessuna mano ancora.</p></div>`;
+  let run=g.sides.map(()=>0);const runs=hs.map(({h})=>run=run.map((v,i)=>v+handScore(h,i)));
+  return `<div class="panel hist"><h2>${short?"Ultime mani":"Tutte le mani"}</h2><table><thead><tr><th>#</th>${g.sides.map(s=>`<th>${esc(s.name.split(" & ")[0])}${s.name.includes("&")?" & …":""}</th>`).join("")}${short?"":"<th></th>"}</tr></thead><tbody>
+  ${list.map(({h,k})=>`<tr data-row="${k}" class="tap"><td>${k+1} <span class="ed">✎</span></td>${g.sides.map((_,i)=>`<td class="${h.closer===i?"c":""}">${fmt(handScore(h,i))}${short?"":`<br><span class="mute">${runs[k][i]}</span>`}</td>`).join("")}${short?"":`<td style="white-space:nowrap"><button data-del="${k}" aria-label="Elimina mano ${k+1}">✕</button></td>`}</tr>`).join("")}
+  </tbody></table><p class="mute" style="margin:8px 0 0">In rosso chi ha chiuso. <b>Tocca una mano per correggerla.</b>${short?"":" Sotto ogni mano, il totale progressivo."}</p>${short&&hs.length>4?`<button class="btn ghost" data-tab="hist">Vedi tutte (${hs.length})</button>`:""}</div>`;
+}
+function handView(){
+  const g=S.game,d=S.draft,title=S.edit>=0?"Correggi mano "+(S.edit+1):"Mano "+(g.hands.length+1);
+  const who=`<div class="panel"><h2>${title} · chi ha chiuso?</h2><div class="who">${g.sides.map((s,i)=>`<button data-cl="${i}" class="${d.picked&&d.closer===i?"on":""}">${esc(s.name)}</button>`).join("")}</div>
+  <button class="link ${d.picked&&d.closer===-1?"on":""}" data-cl="-1">Nessuno, tallone finito</button></div>`;
+  const back=`<button class="btn ghost" data-tab="${S.edit>=0?"hist":"score"}">Annulla</button>${S.edit>=0?`<button class="btn danger" data-del="${S.edit}">Elimina questa mano</button>`:""}`;
+  if(!d.picked)return `<main>${who}${back}</main>`;
+  const order=g.sides.map((_,i)=>i).sort((a,b)=>(b===d.closer)-(a===d.closer));
+  const types=[["pul","Pulito",200],...(g.semi?[["semi","Semip.",150]]:[]),["spo","Sporco",100]];
+  const miss=order.filter(i=>d.closer!==i&&d.sides[i].pz==null).map(i=>g.sides[i].name);
+  const noBur=d.closer>=0&&nb(d.sides[d.closer])<1;
+  const block=noBur?"Chi chiude deve avere almeno un burraco":miss.length?"Manca il pozzetto di "+esc(miss.join(", ")):"";
+  const card=i=>{const x=d.sides[i],cl=d.closer===i,sc=handScore(d,i),c=cards(x);
+    return `<div class="panel ${cl?"closer":""}"><div class="hsc"><h2 style="margin:0">${esc(g.sides[i].name)}</h2><span class="num ${sc<0?"neg":""}">${fmt(sc)}</span></div>
+    ${cl?`<div class="tag">Ha chiuso · +100 · pozzetto preso</div>`:
+    `<div class="q">Ha preso il pozzetto?</div><div class="seg yn"><button data-pzv="${i},1" class="${x.pz===true?"on":""}">Sì</button><button data-pzv="${i},0" class="${x.pz===false?"on no":""}">No · −100</button></div>`}
+    <div class="q">Burraco</div><div class="burs">${types.map(([k,l,v])=>`<div class="bu"><span>${l} <small>${v}</small></span><div class="step"><button data-st="${i},${k},-1" aria-label="meno ${l}">−</button><b class="num">${x[k]}</b><button data-st="${i},${k},1" aria-label="più ${l}">+</button></div></div>`).join("")}</div>
+    <div class="q">${cl?"Punti delle carte calate":"Punti fatti, già tolte le carte in mano"}</div>
+    <button class="pts" data-kp="${i}"><span class="num ${c<0?"neg":""}">${c?fmt(c):"0"}</span><small>tocca per scrivere</small></button></div>`};
+  return `<main>${who}${order.map(card).join("")}
+  <button class="btn" id="saveHand" ${block?"disabled":""}>${block||(S.edit>=0?"Salva correzione":"Registra mano")}</button>${back}</main>`;
+}
+function rulesView(){
+  return `<main><div class="panel rules"><h2>Prontuario Burraco</h2>
+  <h3>Valore delle carte</h3><div class="vals">
+  ${[["30","Jolly","r"],["20","Pinella (2)","r"],["15","Asso",""],["10","K Q J 10 9 8",""],["5","7 6 5 4 3",""]].map(([v,l,c])=>`<div class="pc ${c}"><b class="num">${v}</b><span>${l}</span></div>`).join("")}</div>
+  <h3>Premi e penalità</h3><ul>
+  <li><b>Chiusura:</b> +100 a chi chiude.</li>
+  <li><b>Burraco pulito</b> (7+ carte senza matte): +200.</li>
+  <li><b>Burraco sporco</b> (7+ carte con jolly o pinella): +100.</li>
+  <li><b>Semipulito</b> (variante): +150, almeno 7 naturali in fila più la matta.</li>
+  <li><b>Pozzetto non preso:</b> −100.</li>
+  <li><b>Carte in mano</b> a fine smazzata: si sottraggono al loro valore.</li></ul>
+  <h3>Calcolo della mano</h3><p style="margin:0">chiusura + burraco + carte a terra − carte in mano − 100 se niente pozzetto.</p>
+  <h3>Per chiudere</h3><ul><li>Aver preso il pozzetto.</li><li>Avere almeno un burraco (alcuni regolamenti lo vogliono pulito).</li><li>Scartare l'ultima carta: lo scarto non può essere jolly o pinella.</li></ul>
+  <h3>Preparazione</h3><ul><li>2 mazzi + 4 jolly (108 carte).</li><li>11 carte a testa, due pozzetti da 11 coperti.</li><li>In 4 si gioca a coppie; in 2 e in 3 ognuno per sé.</li></ul>
+  <h3>Combinazioni</h3><ul><li><b>Scala:</b> 3+ carte in sequenza dello stesso seme.</li><li><b>Tris/gruppo:</b> 3+ carte dello stesso valore.</li><li>Una sola matta per combinazione; la pinella nel suo seme e posto naturale conta come carta normale.</li></ul>
+  <h3>Fine partita</h3><p style="margin:0">Vince chi raggiunge per primo la meta (505, 1005, 2005…). Se la superano entrambi nella stessa mano, vince il punteggio più alto.</p>
+  <p class="mute" style="margin-top:14px">Sintesi da regolamenti FIBUR e guide diffuse; nei tornei fanno fede il Codice di Gara ufficiale e l'arbitro.</p></div></main>`;
+}
+function gameView(){
+  const g=S.game;
+  return `<main><div class="panel"><h2>Correggi la partita</h2><p class="mute" style="margin:0">Nomi, meta e varianti. Le mani registrate restano e i totali si ricalcolano.</p>
+  ${g.sides.map((s,i)=>`<label class="f" for="gs${i}">${g.sides.length===2&&s.name.includes(" & ")?"Coppia "+"AB"[i]:"Giocatore "+(i+1)}</label><input type="text" id="gs${i}" maxlength="40" value="${esc(s.name)}">`).join("")}
+  <label class="f">Punteggio da raggiungere</label>
+  <div class="seg" id="gtgt">${[505,1005,1505,2005,2505].map(v=>`<button data-v="${v}" class="${g.target===v?"on":""}">${v}</button>`).join("")}</div>
+  <div class="row" style="margin-top:12px"><div class="lb">Burraco semipulito (150)</div><label class="sw"><input type="checkbox" id="gsemi" ${g.semi?"checked":""}><span></span></label></div>
+  <button class="btn" id="saveGame">Salva</button><button class="btn ghost" data-tab="score">Annulla</button></div>
+  <div class="panel"><h2>Partita registrata male?</h2><p class="mute" style="margin:0 0 4px">Per correggere una singola mano vai nello Storico e toccala. Per ricominciare da capo con gli stessi giocatori:</p>
+  <button class="btn ghost" data-act="clear">Azzera tutte le mani</button></div></main>`;
+}
+function toast(msg){
+  const t=$("toast");t.innerHTML=`<span>${msg}</span>${S.undo?`<button data-act="undo">Annulla</button>`:""}`;t.classList.add("show");
+  clearTimeout(toast.h);toast.h=setTimeout(()=>{t.classList.remove("show");S.undo=null},7000);
+}
+function tabs(){
+  const b=(t,l,ic)=>`<button data-tab="${t}" class="${S.tab===t?"on":""}"><svg viewBox="0 0 24 24">${ICON[ic]}</svg>${l}</button>`;
+  return `<nav class="tabs">${b("score","Partita","score")}${b("hist","Storico","hist")}<button class="plus" data-act="new" aria-label="Nuova mano"><span>+</span></button>${b("rules","Regole","rules")}<button data-act="reset"><svg viewBox="0 0 24 24">${ICON.cards}</svg>Nuova</button></nav>`;
+}
+function render(){
+  const a=$("app");
+  if(!S.game){a.innerHTML=setupView()+`<p class="note">I dati restano su questo telefono</p>`;return}
+  const v={score:scoreView,hist:()=>`<main>${histTable(false)}</main>`,rules:rulesView,hand:handView,game:gameView}[S.tab]();
+  a.innerHTML=board()+v+tabs();
+}
+function newHand(k){
+  const g=S.game;S.edit=k??-1;
+  S.draft=k>=0?JSON.parse(JSON.stringify(g.hands[k])):{closer:-1,picked:false,sides:g.sides.map(blank)};if(k>=0)S.draft.picked=true;
+  S.tab="hand";render();scrollTo(0,0);
+}
+function checkWin(){
+  const g=S.game,t=totals(),mx=Math.max(...t);
+  if(mx<g.target)return;
+  const w=t.map((v,i)=>v===mx?g.sides[i].name:null).filter(Boolean);
+  $("ovc").innerHTML=`<div class="trophy">★</div><h2 style="font-size:24px;margin:8px 0">${w.length>1?"Parità!":"Vince "+esc(w[0])}</h2>
+  <p class="mute">${g.sides.map((s,i)=>esc(s.name)+": <b>"+t[i]+"</b>").join(" · ")}</p>
+  <button class="btn" data-act="reset2">Nuova partita</button><button class="btn ghost" data-act="close">Chiudi</button>`;
+  $("ov").classList.add("show");
+}
+function kpUpdate(){
+  const k=S.kp,v=+k.str||0,el=$("kpDisp");
+  el.textContent=v?(k.neg?"−":"+")+v:"0";el.classList.toggle("neg",k.neg&&v>0);
+}
+function kpRender(){
+  const k=S.kp,cl=S.draft.closer===k.i;
+  $("kp").innerHTML=`<div class="sheet"><div class="hsc"><b>${esc(S.game.sides[k.i].name)}</b><span class="mute">${cl?"carte calate":"punti fatti − carte in mano"}</span></div>
+  <div class="disp num" id="kpDisp" aria-live="polite">0</div>
+  <div class="keys">${["1","2","3","4","5","6","7","8","9","sign","0","del"].map(c=>`<button data-k="${c}" class="${c.length>1?"fn":""}" ${c==="sign"&&cl?"disabled":""}>${c==="del"?"⌫":c==="sign"?"±":c}</button>`).join("")}</div>
+  <div style="display:flex;gap:8px"><button class="btn ghost" id="kpNo">Annulla</button><button class="btn" id="kpOk">OK</button></div></div>`;
+  $("kp").classList.add("show");kpUpdate();
+}
+function confirmBox(msg,yes){
+  $("ovc").innerHTML=`<h2>${msg}</h2><button class="btn" id="cy">Conferma</button><button class="btn ghost" data-act="close">Annulla</button>`;
+  $("ov").classList.add("show");$("cy").onclick=()=>{$("ov").classList.remove("show");yes()};
+}
+document.addEventListener("click",e=>{
+  const tr=e.target.closest("tr[data-row]");if(tr&&!e.target.closest("button")){newHand(+tr.dataset.row);return}
+  const b=e.target.closest("button,input");if(!b)return;const d=S.draft;
+  if(b.closest("#gtgt")){b.parentNode.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));return}
+  if(b.id==="saveGame"){const g=S.game,old=JSON.parse(JSON.stringify({sides:g.sides,target:g.target,semi:g.semi}));
+    g.sides.forEach((s,i)=>{const v=$("gs"+i).value.trim();if(v)s.name=v});
+    g.target=+document.querySelector("#gtgt .on").dataset.v;g.semi=$("gsemi").checked;
+    S.undo={type:"game",prev:old};S.tab="score";save();render();toast("Partita aggiornata");return}
+  if(b.closest("#mode")){S.mode=+b.dataset.v;S.names=S.names.map((_,i)=>$("n"+i)?$("n"+i).value:S.names[i]);render();return}
+  if(b.closest("#tgt")){S.target=+b.dataset.v;render();return}
+  if(b.id==="semi"){S.semi=b.checked;return}
+  if(b.id==="start"){startGame();return}
+  if(b.dataset.cl!==undefined){const prev=d.picked?d.closer:-1;d.closer=+b.dataset.cl;d.picked=true;
+    if(prev>=0&&prev!==d.closer)d.sides[prev].pz=null;
+    if(d.closer>=0){const c=d.sides[d.closer];c.pz=true;if(cards(c)<0)c.carte=0}
+    render();return}
+  if(b.dataset.pzv){const[i,v]=b.dataset.pzv.split(",");d.sides[+i].pz=v==="1";render();return}
+  if(b.dataset.pz!==undefined){d.sides[+b.dataset.pz].pz=b.checked;render();return}
+  if(b.dataset.st){const[i,k,s]=b.dataset.st.split(",");const x=d.sides[+i];
+    x[k]=Math.max(0,x[k]+ +s);x.auto=false;render();return}
+  if(b.dataset.kp!==undefined){const i=+b.dataset.kp,v=cards(d.sides[i]);S.kp={i,str:v?String(Math.abs(v)):"",neg:v<0,fresh:true};kpRender();return}
+  if(b.dataset.k!==undefined){const k=S.kp,c=b.dataset.k,cl=d.closer===k.i;
+    if(c==="del")k.str=k.str.slice(0,-1);
+    else if(c==="sign"){if(!cl)k.neg=!k.neg}
+    else if(c==="+")k.neg=false;else if(c==="-"){if(!cl)k.neg=true}
+    else if(c[0]==="a")k.str=String((+k.str||0)+ +c.slice(1));
+    else if(c==="clr")k.str="";
+    else{if(k.fresh)k.str="";if(k.str.length<4)k.str=(k.str+c).replace(/^0+(?=\d)/,"")}
+    if(c!=="+"&&c!=="-"&&c!=="sign")k.fresh=false;
+    kpUpdate();return}
+  if(b.id==="kpOk"){const k=S.kp,x=d.sides[k.i];x.carte=(k.neg?-1:1)*(+k.str||0);delete x.terra;delete x.mano;S.kp=null;$("kp").classList.remove("show");render();return}
+  if(b.id==="kpNo"){S.kp=null;$("kp").classList.remove("show");return}
+  if(b.id==="saveHand"){const g=S.game;d.sides.forEach(s=>{s.carte=cards(s);delete s.terra;delete s.mano});
+    const ed=S.edit;S.undo=ed>=0?{type:"edit",k:ed,prev:g.hands[ed]}:{type:"add"};
+    if(ed>=0)g.hands[ed]=d;else g.hands.push(d);S.draft=null;S.tab=ed>=0?"hist":"score";S.edit=-1;save();render();
+    toast(ed>=0?"Mano "+(ed+1)+" corretta":"Mano "+g.hands.length+" registrata");checkWin();return}
+  if(b.dataset.edit){newHand(+b.dataset.edit);return}
+  if(b.dataset.del){const k=+b.dataset.del;confirmBox("Eliminare la mano "+(k+1)+"?",()=>{S.undo={type:"del",k,prev:S.game.hands[k]};S.game.hands.splice(k,1);S.draft=null;S.edit=-1;S.tab="hist";save();render();toast("Mano "+(k+1)+" eliminata")});return}
+  if(b.dataset.tab){S.tab=b.dataset.tab;S.draft=null;render();scrollTo(0,0);return}
+  const act=b.dataset.act;
+  if(act==="new")newHand();
+  if(act==="undo"&&S.undo){const u=S.undo,g=S.game;
+    if(u.type==="add")g.hands.pop();else if(u.type==="edit")g.hands[u.k]=u.prev;else if(u.type==="del")g.hands.splice(u.k,0,u.prev);else if(u.type==="game")Object.assign(g,u.prev);
+    S.undo=null;$("toast").classList.remove("show");$("ov").classList.remove("show");save();render();return}
+  if(act==="clear")confirmBox("Azzerare tutte le mani di questa partita?",()=>{S.undo=null;S.game.hands=[];S.tab="score";save();render()});
+  if(act==="close")$("ov").classList.remove("show");
+  if(act==="reset")confirmBox("Chiudere la partita e iniziarne una nuova?",()=>{S.game=null;save();render()});
+  if(act==="reset2"){$("ov").classList.remove("show");S.game=null;save();render()}
+});
+document.addEventListener("input",e=>{
+  const n=e.target.dataset.n;if(!n||!S.draft)return;const[i,k]=n.split(",");S.draft.sides[+i][k]=e.target.value;
+  const el=e.target.closest(".panel").querySelector(".hsc .num");const sc=handScore(S.draft,+i);el.textContent=fmt(sc);el.style.color=sc<0?"var(--red)":"inherit";
+});
+render();
+if("serviceWorker" in navigator&&location.protocol==="https:"){try{navigator.serviceWorker.register("sw.js").catch(()=>{})}catch(e){}}
+}
+</script>
+</body>
+</html>
