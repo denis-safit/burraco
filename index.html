@@ -264,7 +264,7 @@ function tabs(){
 }
 function render(){
   const a=$("app");
-  if(!S.game){a.innerHTML=setupView()+`<p class="note">I dati restano su questo telefono</p>`;return}
+  if(!S.game){a.innerHTML=setupView()+`<p class="note"><a href="light/" style="color:#fff;font-size:17px;font-weight:700">Preferisci un foglio semplice? Apri la versione light</a><br>I dati restano su questo telefono</p>`;return}
   const v={score:scoreView,hist:()=>`<main>${histTable(false)}</main>`,rules:rulesView,hand:handView,game:gameView}[S.tab]();
   a.innerHTML=board()+v+tabs();
 }
