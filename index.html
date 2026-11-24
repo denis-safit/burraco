@@ -130,6 +130,7 @@ tr.tap{cursor:pointer}tr.tap:active{background:var(--soft)}.ed{color:var(--mute)
 .bu{display:flex;align-items:center;justify-content:space-between;gap:6px;background:var(--soft);border-radius:12px;padding:6px 6px 6px 10px;font-weight:600;font-size:15px}
 .bu small{color:var(--mute);font-weight:400}
 .bu .step button{width:36px;height:36px;font-size:20px}.bu .step b{min-width:20px;font-size:20px}
+.mode{display:inline-flex;background:rgba(0,0,0,.25);border-radius:16px;padding:2px;flex:none}.mode a,.mode span{min-height:30px;display:inline-flex;align-items:center;padding:0 12px;border-radius:14px;font:700 13px Figtree,sans-serif;color:#cfe5d7;text-decoration:none}.mode .on{background:#fff;color:#0f5a3c}
 .note{font-size:13px;color:#cfe5d7;text-align:center;padding:4px 16px 16px}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -139,6 +140,9 @@ tr.tap{cursor:pointer}tr.tap:active{background:var(--soft)}.ed{color:var(--mute)
 <div class="kp" id="kp"></div>
 <div class="toast" id="toast" role="status"></div>
 <div class="ov" id="ov"><div class="panel" id="ovc"></div></div>
+<script>
+try{if(localStorage.getItem("burraco-mode")==="light")location.replace("light/")}catch(e){}
+</script>
 <script>
 {
 const S={mode:2,target:2005,semi:false,names:["","","",""],game:null,tab:"score",draft:null,edit:-1};
@@ -160,7 +164,7 @@ cards:'<rect x="3" y="5" width="11" height="15" rx="2" stroke="currentColor" str
 function setupView(){
   const n=S.mode===4?4:S.mode;
   const ph=S.mode===4?["Giocatore 1 (coppia A)","Giocatore 2 (coppia A)","Giocatore 3 (coppia B)","Giocatore 4 (coppia B)"]:["Giocatore 1","Giocatore 2","Giocatore 3"];
-  return `<div class="top"><h1>Nuova partita</h1><div class="toprow" style="margin:6px 0 0">Scegli giocatori e meta, poi si parte.</div></div>
+  return `<div class="top"><div class="toprow" style="margin:0 0 8px"><h1>Nuova partita</h1><div class="mode" role="group" aria-label="Versione"><a href="light/" data-mode="light">Light</a><span class="on">Pro</span></div></div><div class="toprow" style="margin:0">Scegli giocatori e meta, poi si parte.</div></div>
   <main><div class="panel"><h2>Partecipanti</h2>
   <div class="seg" id="mode">${[[2,"2 giocatori"],[3,"3 giocatori"],[4,"4 · a coppie"]].map(([v,l])=>`<button data-v="${v}" class="${S.mode===v?"on":""}">${l}</button>`).join("")}</div>
   ${Array.from({length:n},(_,i)=>`<label class="f" for="n${i}">${ph[i]}</label><input type="text" id="n${i}" maxlength="18" placeholder="Nome" value="${esc(S.names[i]||"")}">`).join("")}
@@ -181,7 +185,7 @@ function startGame(){
 }
 function board(){
   const t=totals(),mx=Math.max(...t),g=S.game;
-  return `<div class="top"><div class="toprow"><span>Meta <b class="num" style="font-size:18px;color:#fff">${g.target}</b> · Mano ${g.hands.length+1}</span><button class="gear" data-tab="game">✎ Partita</button></div>
+  return `<div class="top"><div class="toprow"><span>Meta <b class="num" style="font-size:18px;color:#fff">${g.target}</b> · Mano ${g.hands.length+1}</span><span style="display:flex;gap:6px;align-items:center"><div class="mode" role="group" aria-label="Versione"><a href="light/" data-mode="light">Light</a><span class="on">Pro</span></div><button class="gear" data-tab="game">✎ Partita</button></span></div>
   <div class="board">${g.sides.map((s,i)=>{const p=t[i]===0?0:Math.max(3,Math.min(100,Math.abs(t[i])/g.target*100));const last=g.hands.length?handScore(g.hands.at(-1),i):null;
   return `<div class="side ${g.hands.length&&t[i]===mx?"lead":""}"><div class="nm">${esc(s.name)}</div><div class="tot num ${t[i]<0?"neg":""}">${t[i]}</div>
   <div class="sub">${last===null?"nessuna mano":"ultima "+fmt(last)} · mancano ${Math.max(0,g.target-t[i])}</div><div class="bar" role="img" aria-label="${t[i]} su ${g.target}"><i class="${t[i]<0?"neg":""}" style="width:${p}%"></i></div></div>`}).join("")}</div></div>`;
@@ -264,7 +268,7 @@ function tabs(){
 }
 function render(){
   const a=$("app");
-  if(!S.game){a.innerHTML=setupView()+`<p class="note"><a href="light/" style="color:#fff;font-size:17px;font-weight:700">Preferisci un foglio semplice? Apri la versione light</a><br>I dati restano su questo telefono</p>`;return}
+  if(!S.game){a.innerHTML=setupView()+`<p class="note">Light = foglio semplice a colonne · Pro = conteggio guidato<br>I dati restano su questo telefono</p>`;return}
   const v={score:scoreView,hist:()=>`<main>${histTable(false)}</main>`,rules:rulesView,hand:handView,game:gameView}[S.tab]();
   a.innerHTML=board()+v+tabs();
 }
@@ -299,6 +303,7 @@ function confirmBox(msg,yes){
   $("ov").classList.add("show");$("cy").onclick=()=>{$("ov").classList.remove("show");yes()};
 }
 document.addEventListener("click",e=>{
+  const md=e.target.closest("[data-mode]");if(md){try{localStorage.setItem("burraco-mode",md.dataset.mode)}catch(_){}return}
   const tr=e.target.closest("tr[data-row]");if(tr&&!e.target.closest("button")){newHand(+tr.dataset.row);return}
   const b=e.target.closest("button,input");if(!b)return;const d=S.draft;
   if(b.closest("#gtgt")){b.parentNode.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));return}
